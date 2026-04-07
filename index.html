@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Travel Dashboard </title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="header__inner">
+      <div class="header__logo">
+        <span class="header__logo-icon">✈️</span>
+        <span class="header__logo-text">TravelBoard</span>
+      </div>
+      <p class="header__subtitle">El teu panell de viatge intel·ligent</p>
+    </div>
+  </header>
+  <main class="main">
+    <section class="selector-section">
+      <label class="selector-label" for="city-select">
+        🌍 Selecciona la teva destinació
+      </label>
+      <div class="selector-wrapper">
+        <select id="city-select" class="city-select">
+        </select>
+        <span class="selector-arrow">▾</span>
+      </div>
+    </section>
+
+    <section id="card-resum" class="card card--hero">
+      <div class="loading-state" id="hero-loading">
+        <span class="spinner"></span>
+        <span>Carregant dades…</span>
+      </div>
+      <div class="hero-content" id="hero-content" hidden>
+        <div class="hero-left">
+          <p class="hero-country" id="hero-country"></p>
+          <h2 class="hero-city" id="hero-city"></h2>
+          <div class="hero-temp-row">
+            <span class="hero-temp-icon" id="hero-temp-icon">🌡️</span>
+            <span class="hero-temp" id="hero-temp"></span>
+          </div>
+        </div>
+        <div class="hero-right">
+          <div class="hero-currency-box">
+            <p class="hero-currency-label">Moneda local</p>
+            <p class="hero-currency-value" id="hero-currency"></p>
+          </div>
+          <div class="hero-badge" id="hero-rain-badge"></div>
+        </div>
+      </div>
+    </section>
+    <div class="widgets-grid">
+
+      <section class="card card--widget" id="widget-meteo">
+        <h3 class="widget-title">🌤️ Meteorologia</h3>
+        <div class="loading-state" id="meteo-loading">
+          <span class="spinner"></span>
+          <span>Carregant…</span>
+        </div>
+        <div id="meteo-content" hidden>
+          <div class="meteo-temp-row">
+            <span class="meteo-temp-big" id="meteo-temp"></span>
+            <span class="meteo-temp-unit">°C</span>
+          </div>
+          <div class="meteo-rain-section">
+            <p class="meteo-rain-label">Probabilitat de pluja</p>
+            <div class="rain-bar-track">
+              <div class="rain-bar-fill" id="rain-bar"></div>
+            </div>
+            <p class="meteo-rain-text" id="meteo-rain-text"></p>
+            <p class="meteo-rain-pct" id="meteo-rain-pct"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card card--widget" id="widget-currency">
+        <h3 class="widget-title">💱 Conversió de moneda</h3>
+        <div class="loading-state" id="currency-loading">
+          <span class="spinner"></span>
+          <span>Carregant…</span>
+        </div>
+        <div id="currency-content" hidden>
+          <div class="currency-input-group">
+            <label class="currency-input-label" for="eur-amount">Import en EUR</label>
+            <div class="currency-input-row">
+              <span class="currency-input-prefix">€</span>
+              <input
+                type="number"
+                id="eur-amount"
+                class="currency-input"
+                value="100"
+                min="0"
+                step="any"
+                placeholder="100"
+              />
+            </div>
+          </div>
+          <div class="currency-arrow-row">
+            <span class="currency-arrow-icon">⬇️</span>
+          </div>
+          <div class="currency-result-box">
+            <p class="currency-result-label" id="currency-result-label"></p>
+            <p class="currency-result-value" id="currency-result-value"></p>
+          </div>
+          <p class="currency-rate-note" id="currency-rate-note"></p>
+        </div>
+      </section>
+
+    </div>
+
+    <section class="card card--recommendation" id="recommendation-card">
+      <div class="rec-icon" id="rec-icon">💡</div>
+      <div class="rec-body">
+        <h3 class="rec-title">Recomanació de viatge</h3>
+        <p class="rec-message" id="rec-message">Selecciona una ciutat per veure la recomanació.</p>
+        <p class="rec-extra" id="rec-extra"></p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <p>© 2025 · Pràctica ASIX · La Salle · Dades: Open-Meteo &amp; ExchangeRate.host</p>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>
