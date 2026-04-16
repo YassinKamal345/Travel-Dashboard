@@ -1,4 +1,4 @@
-/* 1. CIUTATS */
+// 1. CIUTATS
 const cities = [
   { name: "Barcelona", country: "España", lat: 41.3851, lon: 2.1734, currency: "EUR" },
   { name: "London", country: "Reino Unido", lat: 51.5074, lon: -0.1278, currency: "GBP" },
@@ -7,267 +7,179 @@ const cities = [
   { name: "Tokyo", country: "Japón", lat: 35.6895, lon: 139.6917, currency: "JPY" }
 ];
 
-/* 2. ESTAT GLOBAL */
-const appState = {
-  currentCity: null,    // ciutat actual
-  targetCurrency: null, // moneda destí
-  lastConversion: null  // últim resultat conversió
-};
+// 2. ESTAT
+const appState = { currentCity: null, targetCurrency: null, lastConversion: null };
 
-/* 3. DOM */
-const citySelect = document.querySelector('#city-select');
+// 3. DOM
+const $ = s => document.querySelector(s);
 
-// Hero
-const heroLoading = document.querySelector('#hero-loading');
-const heroContent = document.querySelector('#hero-content');
-const heroCountry = document.querySelector('#hero-country');
-const heroCity = document.querySelector('#hero-city');
-const heroTempIcon = document.querySelector('#hero-temp-icon');
-const heroTemp = document.querySelector('#hero-temp');
-const heroCurrency = document.querySelector('#hero-currency');
-const heroRainBadge = document.querySelector('#hero-rain-badge');
+const citySelect = $('#city-select');
 
-// Meteo
-const meteoLoading = document.querySelector('#meteo-loading');
-const meteoContent = document.querySelector('#meteo-content');
-const meteoTemp = document.querySelector('#meteo-temp');
-const rainBar = document.querySelector('#rain-bar');
-const meteoRainText = document.querySelector('#meteo-rain-text');
-const meteoRainPct = document.querySelector('#meteo-rain-pct');
+const heroLoading = $('#hero-loading'), heroContent = $('#hero-content');
+const heroCountry = $('#hero-country'), heroCity = $('#hero-city');
+const heroTempIcon = $('#hero-temp-icon'), heroTemp = $('#hero-temp');
+const heroCurrency = $('#hero-currency'), heroRainBadge = $('#hero-rain-badge');
 
-// Moneda
-const currencyLoading = document.querySelector('#currency-loading');
-const currencyContent = document.querySelector('#currency-content');
-const eurAmountInput = document.querySelector('#eur-amount');
-const currencyResultLabel = document.querySelector('#currency-result-label');
-const currencyResultValue = document.querySelector('#currency-result-value');
-const currencyRateNote = document.querySelector('#currency-rate-note');
+const meteoLoading = $('#meteo-loading'), meteoContent = $('#meteo-content');
+const meteoTemp = $('#meteo-temp'), rainBar = $('#rain-bar');
+const meteoRainText = $('#meteo-rain-text'), meteoRainPct = $('#meteo-rain-pct');
 
-// Recomanació
-const recIcon = document.querySelector('#rec-icon');
-const recMessage = document.querySelector('#rec-message');
-const recExtra = document.querySelector('#rec-extra');
+const currencyLoading = $('#currency-loading'), currencyContent = $('#currency-content');
+const eurAmountInput = $('#eur-amount');
+const currencyResultLabel = $('#currency-result-label');
+const currencyResultValue = $('#currency-result-value');
+const currencyRateNote = $('#currency-rate-note');
 
-/* 4. HELPERS */
-function showLoading(l, c) {
-  l.removeAttribute('hidden');
-  c.setAttribute('hidden', '');
-}
-function hideLoading(l, c) {
-  l.setAttribute('hidden', '');
-  c.removeAttribute('hidden');
-}
+const recIcon = $('#rec-icon'), recMessage = $('#rec-message'), recExtra = $('#rec-extra');
 
-/* 5. SELECT CIUTATS */
-function initCitySelector() {
-  cities.forEach((city, i) => {
-    const option = document.createElement('option');
-    option.value = i;
-    option.textContent = `${city.name} · ${city.country}`;
-    citySelect.appendChild(option);
+// 4. HELPERS
+const show = (l,c)=>{l.hidden=false;c.hidden=true};
+const hide = (l,c)=>{l.hidden=true;c.hidden=false};
+
+// 5. SELECT
+function initCitySelector(){
+  cities.forEach((c,i)=>{
+    const o=document.createElement('option');
+    o.value=i;
+    o.textContent=`${c.name} · ${c.country}`;
+    citySelect.appendChild(o);
   });
 }
 
-/* 6. API METEO */
-async function fetchWeather(lat, lon) {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m&hourly=precipitation_probability&timezone=auto`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Error API: ${res.status}`);
-  const data = await res.json();
+// 6. WEATHER
+async function fetchWeather(lat,lon){
+  const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m&hourly=precipitation_probability&timezone=auto`);
+  if(!r.ok) throw new Error('Weather API');
+  const d=await r.json();
   return {
-    temperature: data.current.temperature_2m,
-    rainProbability: data.hourly.precipitation_probability[0]
+    temperature:d.current.temperature_2m,
+    rainProbability:d.hourly.precipitation_probability[0]
   };
 }
 
-/* 7. API MONEDA */
-async function fetchConversionFromFrankfurter(amount, targetCurrency) {
-  const url = `https://api.frankfurter.app/latest?amount=${amount}&from=EUR&to=${targetCurrency}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`frankfurter ${res.status}`);
-  const data = await res.json();
-
-  const converted = data.rates?.[targetCurrency];
-  if (converted === undefined) throw new Error(`sense resultat ${targetCurrency}`);
-
-  return {
-    converted,
-    rate: converted / amount,
-    source: 'Frankfurter · BCE',
-    updated: data.date
-  };
+// 7. MONEDA
+async function fetchFrank(amount,curr){
+  const r=await fetch(`https://api.frankfurter.app/latest?amount=${amount}&from=EUR&to=${curr}`);
+  if(!r.ok) throw new Error('Frankfurter');
+  const d=await r.json();
+  const converted=d.rates[curr];
+  return {converted,rate:converted/amount,source:'Frankfurter',updated:d.date};
 }
 
-// fallback CDN
-async function fetchConversionFromFawaz(amount, targetCurrency) {
-  const t = targetCurrency.toLowerCase();
-  const url = `https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/eur.json`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`fawaz ${res.status}`);
-  const data = await res.json();
-
-  const rate = data.eur?.[t];
-  if (!rate) throw new Error(`sense dades ${t}`);
-
-  const noDec = ['JPY','KRW','IDR','VND','CLP','HUF'];
-  const converted = noDec.includes(targetCurrency)
-    ? Math.round(amount * rate)
-    : Math.round(amount * rate * 100) / 100;
-
-  return { converted, rate, source: 'fawazahmed0 · CDN', updated: data.date };
+async function fetchFallback(amount,curr){
+  const r=await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/eur.json`);
+  if(!r.ok) throw new Error('Fallback');
+  const d=await r.json();
+  const rate=d.eur[curr.toLowerCase()];
+  const noDec=['JPY','KRW','IDR','VND','CLP','HUF'];
+  const converted=noDec.includes(curr)?Math.round(amount*rate):Math.round(amount*rate*100)/100;
+  return {converted,rate,source:'Fallback',updated:d.date};
 }
 
-// principal + fallback
-async function fetchConversion(amount, targetCurrency) {
-  if (targetCurrency === 'EUR')
-    return { converted: amount, rate: 1, source: 'Zona Euro', updated: null };
+async function fetchConversion(amount,curr){
+  if(curr==='EUR') return {converted:amount,rate:1,source:'EUR',updated:null};
+  try{return await fetchFrank(amount,curr)}
+  catch{ return await fetchFallback(amount,curr)}
+}
 
-  try {
-    return await fetchConversionFromFrankfurter(amount, targetCurrency);
-  } catch {
-    return await fetchConversionFromFawaz(amount, targetCurrency);
+// 8. HELPERS UI
+const getRainInfo=p=>p<=20?{e:'☀️',t:'Sense pluja',l:'low'}:p<=50?{e:'🌦️',t:'Possible precipitacions',l:'mid'}:{e:'🌧️',t:'Probable pluja',l:'high'};
+const getTempEmoji=t=>t>=30?'🔥':t>=20?'☀️':t>=10?'🌤️':t>=0?'🧥':'🥶';
+
+// 9. UPDATE UI
+function updateHeroCard(city,temp,rain){
+  const r=getRainInfo(rain);
+  heroCountry.textContent=city.country;
+  heroCity.textContent=city.name; // ✅ FIX CLAVE
+  heroTempIcon.textContent=getTempEmoji(temp);
+  heroTemp.textContent=`${temp}°C`;
+  heroCurrency.textContent=city.currency;
+  heroRainBadge.textContent=`${r.e} ${r.t}`;
+}
+
+function updateMeteo(temp,rain){
+  const r=getRainInfo(rain);
+  meteoTemp.textContent=temp;
+  rainBar.style.width=`${Math.min(rain,100)}%`;
+  rainBar.className=`rain-bar-fill rain-${r.l}`;
+  meteoRainText.textContent=`${r.e} ${r.t}`;
+  meteoRainPct.textContent=`Probabilitat: ${rain}%`;
+}
+
+async function updateCurrency(){
+  const curr=appState.targetCurrency;
+  if(!curr) return;
+
+  const amount=parseFloat(eurAmountInput.value);
+  if(isNaN(amount)||amount<0){
+    currencyResultValue.textContent='Import no vàlid';return;
+  }
+  if(amount===0){
+    currencyResultValue.textContent=`0 ${curr}`;return;
+  }
+
+  try{
+    const r=await fetchConversion(amount,curr);
+    appState.lastConversion=r;
+
+    const noDec=['JPY','KRW','IDR','VND','CLP','HUF'];
+    const d=noDec.includes(curr)?0:2;
+
+    const val=r.converted.toLocaleString('ca-ES',{minimumFractionDigits:d,maximumFractionDigits:d});
+    currencyResultLabel.textContent=`${amount} EUR =`;
+    currencyResultValue.textContent=`${val} ${curr}`;
+    currencyRateNote.textContent=curr==='EUR'?'Zona euro':`1 EUR = ${r.rate.toFixed(4)} ${curr}`;
+  }catch{
+    currencyResultValue.textContent='Error';
   }
 }
 
-/* 8. METEO INFO */
-function getRainInfo(pct) {
-  if (pct <= 20) return { emoji: '☀️', text: 'Sense pluja', level: 'low' };
-  if (pct <= 50) return { emoji: '🌦️', text: 'Possible precipitacions', level: 'mid' };
-  return { emoji: '🌧️', text: 'Probable pluja', level: 'high' };
+function updateRec(temp,rain,city,curr,val){
+  let msg=''; let icon='💡';
+  if(temp>18&&rain<30){icon='😎';msg=`Bon temps a ${city}`;}
+  else if(temp>18){icon='🌂';msg=`Calor però pluja a ${city}`;}
+  else if(temp>8){icon='🧥';msg=`Fresquet a ${city}`;}
+  else{icon='🥶';msg=`Fred a ${city}`;}
+
+  recIcon.textContent=icon;
+  recMessage.textContent=msg;
+  recExtra.textContent=curr==='EUR'?'100 EUR = 100 EUR':`💰 100 EUR = ${val} ${curr}`;
 }
 
-function getTempEmoji(t) {
-  if (t >= 30) return '🔥';
-  if (t >= 20) return '☀️';
-  if (t >= 10) return '🌤️';
-  if (t >= 0) return '🧥';
-  return '🥶';
-}
+// 10. LOAD
+async function loadCityData(i){
+  const city=cities[i];
+  appState.currentCity=city;
+  appState.targetCurrency=city.currency;
 
-/* 9. RECOMANACIÓ */
-function updateRecommendation(temp, rain, city, currency, conv100) {
-  let icon = '💡', msg = '';
+  show(heroLoading,heroContent);
+  show(meteoLoading,meteoContent);
+  show(currencyLoading,currencyContent);
 
-  if (temp > 18 && rain < 30)
-    [icon, msg] = ['😎', `Bon temps a ${city} (${temp}°C)`];
-  else if (temp > 18)
-    [icon, msg] = ['🌂', `Calor a ${city}, porta paraigua`];
-  else if (temp > 8)
-    [icon, msg] = ['🧥', `Fresquet a ${city} (${temp}°C)`];
-  else if (temp > 0)
-    [icon, msg] = ['🥶', `Fred a ${city} (${temp}°C)`];
-  else
-    [icon, msg] = ['❄️', `Sota zero a ${city}`];
+  try{
+    const w=await fetchWeather(city.lat,city.lon);
 
-  const noDec = ['JPY','KRW','IDR','VND','CLP','HUF'];
-  const dec = noDec.includes(currency) ? 0 : 2;
+    updateHeroCard(city,w.temperature,w.rainProbability);
+    updateMeteo(w.temperature,w.rainProbability);
+    await updateCurrency();
 
-  const extra = currency === 'EUR'
-    ? '100 EUR = 100 EUR'
-    : `💰 100 EUR = ${conv100.toLocaleString('ca-ES',{minimumFractionDigits:dec,maximumFractionDigits:dec})} ${currency}`;
+    const base=await fetchConversion(100,city.currency);
+    updateRec(w.temperature,w.rainProbability,city.name,city.currency,base.converted);
 
-  recIcon.textContent = icon;
-  recMessage.textContent = msg;
-  recExtra.textContent = extra;
-}
-
-/* 10. METEO UI */
-function updateMeteoWidget(temp, rain) {
-  const r = getRainInfo(rain);
-  meteoTemp.textContent = temp;
-  rainBar.style.width = `${Math.min(rain,100)}%`;
-  rainBar.className = `rain-bar-fill rain-${r.level}`;
-  meteoRainText.textContent = `${r.emoji} ${r.text}`;
-  meteoRainPct.textContent = `Probabilitat: ${rain}%`;
-}
-
-/* 11. MONEDA UI */
-async function updateCurrencyWidget() {
-  const { targetCurrency } = appState;
-  if (!targetCurrency) return;
-
-  const amount = parseFloat(eurAmountInput.value);
-  if (isNaN(amount) || amount < 0) {
-    currencyResultValue.textContent = 'Import no vàlid';
-    return;
-  }
-
-  if (amount === 0) {
-    currencyResultValue.textContent = `0 ${targetCurrency}`;
-    return;
-  }
-
-  try {
-    const res = await fetchConversion(amount, targetCurrency);
-    appState.lastConversion = res;
-
-    const noDec = ['JPY','KRW','IDR','VND','CLP','HUF'];
-    const dec = noDec.includes(targetCurrency) ? 0 : 2;
-
-    const val = res.converted.toLocaleString('ca-ES',{minimumFractionDigits:dec,maximumFractionDigits:dec});
-
-    currencyResultLabel.textContent = `${amount} EUR =`;
-    currencyResultValue.textContent = `${val} ${targetCurrency}`;
-    currencyRateNote.textContent = targetCurrency === 'EUR'
-      ? 'Zona euro'
-      : `1 EUR = ${res.rate.toFixed(6)} ${targetCurrency} · ${res.source} · ${res.updated}`;
-
-  } catch (e) {
-    currencyResultValue.textContent = '⚠️ Error';
-    currencyRateNote.textContent = e.message;
+    hide(heroLoading,heroContent);
+    hide(meteoLoading,meteoContent);
+    hide(currencyLoading,currencyContent);
+  }catch(e){
+    recMessage.textContent='Error carregant dades';
   }
 }
 
-/* 12. HERO */
-function updateHeroCard(city, temp, rain) {
-  const r = getRainInfo(rain);
-  heroCountry.textContent = city.country;
-  heroCity.textContent = city.name;
-  heroTempIcon.textContent = getTempEmoji(temp);
-  heroTemp.textContent = `${temp}°C`;
-  heroCurrency.textContent = city.currency;
-  heroRainBadge.textContent = `${r.emoji} ${r.text}`;
-}
+// 11. EVENTS
+citySelect.addEventListener('change',e=>loadCityData(+e.target.value));
+eurAmountInput.addEventListener('input',updateCurrency);
 
-/* 13. LOAD DATA */
-async function loadCityData(i) {
-  const city = cities[i];
-  appState.currentCity = city;
-  appState.targetCurrency = city.currency;
-
-  showLoading(heroLoading, heroContent);
-  showLoading(meteoLoading, meteoContent);
-  showLoading(currencyLoading, currencyContent);
-
-  recMessage.textContent = 'Carregant...';
-
-  try {
-    const [{ temperature, rainProbability }] = await Promise.all([
-      fetchWeather(city.lat, city.lon)
-    ]);
-
-    updateHeroCard(city, temperature, rainProbability);
-    updateMeteoWidget(temperature, rainProbability);
-    await updateCurrencyWidget();
-
-    const base = await fetchConversion(100, city.currency);
-    updateRecommendation(temperature, rainProbability, city.name, city.currency, base.converted);
-
-    hideLoading(heroLoading, heroContent);
-    hideLoading(meteoLoading, meteoContent);
-    hideLoading(currencyLoading, currencyContent);
-
-  } catch (e) {
-    recMessage.textContent = 'Error carregant dades';
-  }
-}
-
-/* 14. EVENTS */
-citySelect.addEventListener('change', e => loadCityData(parseInt(e.target.value)));
-eurAmountInput.addEventListener('input', () => updateCurrencyWidget());
-
-/* 15. INIT */
-function init() {
+// 12. INIT
+function init(){
   initCitySelector();
   loadCityData(0);
 }
